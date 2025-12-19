@@ -1,7 +1,7 @@
 package http
 
 import (
-	"net/http"
+	netHTTP "net/http"
 
 	"github.com/donnigundala/dg-core/contracts/foundation"
 	httpContract "github.com/donnigundala/dg-core/contracts/http"
@@ -34,12 +34,12 @@ func (k *Kernel) GetMiddleware() []gin.HandlerFunc {
 }
 
 // Handle handles the incoming HTTP request.
-func (k *Kernel) Handle(w http.ResponseWriter, r *http.Request) {
+func (k *Kernel) Handle(w netHTTP.ResponseWriter, r *netHTTP.Request) {
 	// Serve the request through Gin engine
 	k.engine.ServeHTTP(w, r)
 }
 
 // ServeHTTP satisfies the http.Handler interface.
-func (k *Kernel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (k *Kernel) ServeHTTP(w netHTTP.ResponseWriter, r *netHTTP.Request) {
 	k.Handle(w, r)
 }

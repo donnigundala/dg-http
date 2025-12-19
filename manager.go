@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
+	netHTTP "net/http"
 	"os"
 	"strings"
 	"sync"
@@ -142,7 +142,7 @@ func (m *Manager) runServers(ctx context.Context, names ...string) error {
 		go func(s *registry) {
 			defer wg.Done()
 			m.logger.Info("server started", "name", s.Name)
-			if err := s.Runner.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if err := s.Runner.Start(); err != nil && !errors.Is(err, netHTTP.ErrServerClosed) {
 				errCh <- fmt.Errorf("server %q failed: %w", s.Name, err)
 			}
 		}(srv)

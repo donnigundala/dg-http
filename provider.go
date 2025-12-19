@@ -1,8 +1,6 @@
 package http
 
 import (
-	"net/http"
-
 	"github.com/donnigundala/dg-core/contracts/foundation"
 	"github.com/gin-gonic/gin"
 )
@@ -38,30 +36,21 @@ func (p *HttpServiceProvider) Register(app foundation.Application) error {
 		})
 	}
 
-	// 2. Register the Kernel IF NOT already present
-	if _, err := app.Make("kernel"); err != nil {
-		app.Singleton("kernel", func() (interface{}, error) {
-			// Resolve the router/engine we just registered (or that was already there)
-			routerInterface, err := app.Make("router")
-			if err != nil {
-				return nil, err
-			}
-
-			engine := routerInterface.(http.Handler)
-			return NewKernel(app, engine.(*gin.Engine)), nil
-		})
+	// 2. Resolve the Router once (registered above if missing)
+	routerInterface, err := app.Make("router")
+	if err != nil {
+		return err
 	}
+	engine := routerInterface.(*gin.Engine)
 
-	// 3. Register the Server as the main plugin instance
-	// This allows the framework to call Start() and Stop() automatically
+	// 3. Register the Kernel
+	app.Singleton("kernel", func() (interface{}, error) {
+		return NewKernel(app, engine), nil
+	})
+
+	// 4. Register the Server as the main plugin instance
 	app.Singleton("http", func() (interface{}, error) {
-		routerInterface, err := app.Make("router")
-		if err != nil {
-			return nil, err
-		}
-
-		handler := routerInterface.(http.Handler)
-		return NewHTTPServer(p.Config, handler), nil
+		return NewHTTPServer(p.Config, engine), nil
 	})
 
 	return nil

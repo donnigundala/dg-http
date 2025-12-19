@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
+	netHTTP "net/http"
 	"os"
 
 	"github.com/donnigundala/dg-core/contracts/lifecycle"
@@ -18,7 +18,7 @@ var _ lifecycle.Stoppable = (*HTTPServer)(nil)
 // HTTPServer wraps the standard http.Server to provide a production-ready,
 // configurable server that implements the lifecycle interfaces.
 type HTTPServer struct {
-	server *http.Server
+	server *netHTTP.Server
 	logger *slog.Logger
 }
 
@@ -27,8 +27,8 @@ type HTTPServerOption func(*HTTPServer)
 
 // NewHTTPServer creates a new HTTPServer.
 // The handler is the root HTTP handler for the server (e.g., a router).
-func NewHTTPServer(cfg Config, handler http.Handler, opts ...HTTPServerOption) *HTTPServer {
-	httpServer := &http.Server{
+func NewHTTPServer(cfg Config, handler netHTTP.Handler, opts ...HTTPServerOption) *HTTPServer {
+	httpServer := &netHTTP.Server{
 		Addr:         cfg.Addr,
 		Handler:      handler,
 		ReadTimeout:  cfg.ReadTimeout,
@@ -73,7 +73,7 @@ func WithHTTPLogger(logger *slog.Logger) HTTPServerOption {
 }
 
 // WithHTTPHandler sets the HTTP handler for the server.
-func WithHTTPHandler(handler http.Handler) HTTPServerOption {
+func WithHTTPHandler(handler netHTTP.Handler) HTTPServerOption {
 	return func(s *HTTPServer) {
 		s.server.Handler = handler
 	}
@@ -91,7 +91,7 @@ func (s *HTTPServer) Start() error {
 			err = s.server.ListenAndServe()
 		}
 
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err != nil && !errors.Is(err, netHTTP.ErrServerClosed) {
 			s.logger.Error("HTTP server failed", "error", err)
 		}
 	}()
