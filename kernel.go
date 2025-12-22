@@ -1,4 +1,4 @@
-package http
+package dghttp
 
 import (
 	netHTTP "net/http"

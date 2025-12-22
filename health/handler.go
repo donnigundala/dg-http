@@ -4,7 +4,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+// MetricsHandler returns a Gin handler for Prometheus metrics.
+func MetricsHandler() gin.HandlerFunc {
+	h := promhttp.Handler()
+	return func(c *gin.Context) {
+		h.ServeHTTP(c.Writer, c.Request)
+	}
+}
 
 // LivenessHandler returns a Gin handler for liveness probes.
 // Liveness probes check if the application is running.

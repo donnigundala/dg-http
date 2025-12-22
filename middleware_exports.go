@@ -1,10 +1,10 @@
-package http
+package dghttp
 
 import (
 	"time"
 
-	"github.com/donnigundala/dg-http/middleware"
 	"github.com/donnigundala/dg-core/logging"
+	"github.com/donnigundala/dg-http/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -85,8 +85,8 @@ func DefaultCompressConfig() middleware.CompressConfig {
 	return middleware.DefaultCompressConfig()
 }
 
-// Logger middleware
-func Logger(config middleware.LoggerConfig) gin.HandlerFunc {
+// AccessLogger middleware
+func AccessLogger(config middleware.LoggerConfig) gin.HandlerFunc {
 	return middleware.Logger(config)
 }
 
@@ -105,4 +105,13 @@ func RequestID() gin.HandlerFunc {
 
 func RequestIDWithDefault() gin.HandlerFunc {
 	return middleware.RequestIDWithDefault()
+}
+
+// Observability middleware
+func Observability(config middleware.ObservabilityConfig) gin.HandlerFunc {
+	return middleware.Observability(config)
+}
+
+func ObservabilityWithDefault() gin.HandlerFunc {
+	return middleware.Observability(middleware.ObservabilityConfig{})
 }

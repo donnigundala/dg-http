@@ -42,4 +42,4 @@ It includes the Router, Kernel, Server, and Middleware chain.
 		    api.GET("/users", GetUsers)
 		}
 */
-package http
+package dghttp

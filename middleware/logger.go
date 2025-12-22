@@ -7,9 +7,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// LoggerInterface is a minimal interface needed for the middleware.
+// It is compatible with the standard Logger interface in the dg-http package.
+type LoggerInterface interface {
+	Info(msg string, args ...interface{})
+	Error(msg string, args ...interface{})
+}
+
 // LoggerConfig defines the configuration for the logger middleware
 type LoggerConfig struct {
-	Logger        *logging.Logger
+	Logger        LoggerInterface
 	SkipPaths     []string
 	LogLatency    bool
 	LogClientIP   bool

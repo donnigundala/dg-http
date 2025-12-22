@@ -1,4 +1,4 @@
-package http
+package dghttp
 
 import (
 	"context"
@@ -15,11 +15,9 @@ import (
 var _ lifecycle.Runnable = (*HTTPServer)(nil)
 var _ lifecycle.Stoppable = (*HTTPServer)(nil)
 
-// HTTPServer wraps the standard http.Server to provide a production-ready,
-// configurable server that implements the lifecycle interfaces.
 type HTTPServer struct {
 	server *netHTTP.Server
-	logger *slog.Logger
+	logger Logger
 }
 
 // HTTPServerOption configures an HTTPServer.
@@ -46,7 +44,7 @@ func NewHTTPServer(cfg Config, handler netHTTP.Handler, opts ...HTTPServerOption
 
 	// Set a default logger if one wasn't provided.
 	if srv.logger == nil {
-		srv.logger = slog.New(slog.NewTextHandler(os.Stderr, nil))
+		srv.logger = &defaultLogger{slog.New(slog.NewTextHandler(os.Stderr, nil))}
 	}
 	srv.logger = srv.logger.With("component", "http-server", "addr", srv.server.Addr)
 
@@ -66,10 +64,19 @@ func NewHTTPServer(cfg Config, handler netHTTP.Handler, opts ...HTTPServerOption
 }
 
 // WithHTTPLogger sets a custom logger for the HTTP server.
-func WithHTTPLogger(logger *slog.Logger) HTTPServerOption {
+func WithHTTPLogger(logger Logger) HTTPServerOption {
 	return func(s *HTTPServer) {
 		s.logger = logger
 	}
+}
+
+// defaultLogger wraps slog.Logger to satisfy the Logger interface.
+type defaultLogger struct {
+	*slog.Logger
+}
+
+func (l *defaultLogger) With(args ...interface{}) Logger {
+	return &defaultLogger{l.Logger.With(args...)}
 }
 
 // WithHTTPHandler sets the HTTP handler for the server.
@@ -79,15 +86,36 @@ func WithHTTPHandler(handler netHTTP.Handler) HTTPServerOption {
 	}
 }
 
+// URL returns the server's full URL.
+func (s *HTTPServer) URL() string {
+	protocol := "http"
+	if s.server.TLSConfig != nil {
+		protocol = "https"
+	}
+	addr := s.server.Addr
+	if addr == "" {
+		if protocol == "https" {
+			addr = ":443"
+		} else {
+			addr = ":80"
+		}
+	}
+	// If it only contains the port (e.g., ":8080"), prepend "localhost"
+	if len(addr) > 0 && addr[0] == ':' {
+		addr = "localhost" + addr
+	}
+	return fmt.Sprintf("%s://%s", protocol, addr)
+}
+
 // Start begins listening and serving requests. It's a non-blocking call.
 func (s *HTTPServer) Start() error {
 	go func() {
 		var err error
 		if s.server.TLSConfig != nil {
-			s.logger.Info("starting HTTPS server")
+			s.logger.Info(fmt.Sprintf("starting HTTPS server on %s", s.URL()))
 			err = s.server.ListenAndServeTLS("", "")
 		} else {
-			s.logger.Info("starting HTTP server")
+			s.logger.Info(fmt.Sprintf("starting HTTP server on %s", s.URL()))
 			err = s.server.ListenAndServe()
 		}
 

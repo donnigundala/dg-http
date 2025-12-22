@@ -11,14 +11,14 @@ import (
 )
 
 // Recovery returns a middleware that recovers from panics.
-func Recovery(logger *logging.Logger) gin.HandlerFunc {
+func Recovery(logger LoggerInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
 				// Log the panic with stack trace (internal logging)
 				stack := string(debug.Stack())
 
-				logger.ErrorContext(c.Request.Context(), "Panic recovered",
+				logger.Error("Panic recovered",
 					"error", err,
 					"stack", stack,
 					"method", c.Request.Method,

@@ -1,6 +1,8 @@
-package http
+package dghttp
 
 import (
+	"reflect"
+
 	"github.com/donnigundala/dg-core/contracts/foundation"
 	"github.com/gin-gonic/gin"
 )
@@ -12,14 +14,19 @@ type HttpServiceProvider struct {
 	Config Config `config:"http"`
 }
 
+// NewHttpServiceProvider creates a new HTTP service provider.
+func NewHttpServiceProvider() *HttpServiceProvider {
+	return &HttpServiceProvider{}
+}
+
 // Name returns the plugin name.
 func (p *HttpServiceProvider) Name() string {
-	return "http"
+	return Binding
 }
 
 // Version returns the plugin version.
 func (p *HttpServiceProvider) Version() string {
-	return "1.0.0"
+	return Version
 }
 
 // Dependencies returns the list of dependencies.
@@ -29,31 +36,101 @@ func (p *HttpServiceProvider) Dependencies() []string {
 
 // Register registers the HTTP services into the container.
 func (p *HttpServiceProvider) Register(app foundation.Application) error {
-	// 1. Register the Router (Gin Engine) IF NOT already present
+	// 1. Register a default Router (Gin Engine) IF NOT already present.
+	// Applications usually provide their own in the Kernel.
 	if _, err := app.Make("router"); err != nil {
 		app.Singleton("router", func() (interface{}, error) {
 			return NewRouter(), nil
 		})
 	}
 
-	// 2. Resolve the Router once (registered above if missing)
-	routerInterface, err := app.Make("router")
-	if err != nil {
-		return err
-	}
-	engine := routerInterface.(*gin.Engine)
-
-	// 3. Register the Kernel
+	// 2. Register the Kernel (wraps the engine with core logic)
+	// We use a singleton so it's resolved only when needed.
 	app.Singleton("kernel", func() (interface{}, error) {
-		return NewKernel(app, engine), nil
+		routerInterface, err := app.Make("router")
+		if err != nil {
+			return nil, err
+		}
+		return NewKernel(app, routerInterface.(*gin.Engine)), nil
 	})
 
-	// 4. Register the Server as the main plugin instance
-	app.Singleton("http", func() (interface{}, error) {
-		return NewHTTPServer(p.Config, engine), nil
+	// 3. Register the Server as the main plugin instance.
+	// We resolve the router lazily inside the singleton to ensure we get
+	// the instance that might have been overwritten by the application's Kernel.
+	app.Singleton(Binding, func() (interface{}, error) {
+		routerInterface, err := app.Make("router")
+		if err != nil {
+			return nil, err
+		}
+
+		var loggerInstance Logger
+		// Try to resolve logger from container
+		if log, err := app.Make("logger"); err == nil {
+			// Adapt the logger to our Logger interface
+			if adapted, ok := log.(interface {
+				Debug(msg string, args ...interface{})
+				Info(msg string, args ...interface{})
+				Warn(msg string, args ...interface{})
+				Error(msg string, args ...interface{})
+			}); ok {
+				loggerInstance = &loggerAdapter{logger: adapted}
+			}
+		}
+
+		return NewHTTPServer(p.Config, routerInterface.(*gin.Engine), WithHTTPLogger(loggerInstance)), nil
 	})
 
 	return nil
+}
+
+// loggerAdapter adapts a generic logger to http.Logger interface.
+type loggerAdapter struct {
+	logger interface {
+		Debug(msg string, args ...interface{})
+		Info(msg string, args ...interface{})
+		Warn(msg string, args ...interface{})
+		Error(msg string, args ...interface{})
+	}
+}
+
+func (l *loggerAdapter) Debug(msg string, args ...interface{}) {
+	l.logger.Debug(msg, args...)
+}
+
+func (l *loggerAdapter) Info(msg string, args ...interface{}) {
+	l.logger.Info(msg, args...)
+}
+
+func (l *loggerAdapter) Warn(msg string, args ...interface{}) {
+	l.logger.Warn(msg, args...)
+}
+
+func (l *loggerAdapter) Error(msg string, args ...interface{}) {
+	l.logger.Error(msg, args...)
+}
+
+func (l *loggerAdapter) With(args ...interface{}) Logger {
+	// Try to call With(args...) via reflection to support different return types
+	v := reflect.ValueOf(l.logger)
+	m := v.MethodByName("With")
+	if m.IsValid() {
+		valArgs := make([]reflect.Value, len(args))
+		for i, arg := range args {
+			valArgs[i] = reflect.ValueOf(arg)
+		}
+		results := m.Call(valArgs)
+		if len(results) == 1 {
+			if nextLogger, ok := results[0].Interface().(interface {
+				Debug(msg string, args ...interface{})
+				Info(msg string, args ...interface{})
+				Warn(msg string, args ...interface{})
+				Error(msg string, args ...interface{})
+			}); ok {
+				return &loggerAdapter{logger: nextLogger}
+			}
+		}
+	}
+	return l
 }
 
 // Boot boots the HTTP services.

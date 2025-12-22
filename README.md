@@ -50,9 +50,28 @@ func main() {
 If you prefer full control, you can still initialize the components manually:
 
 ```go
-router.Use(http.LoggerWithDefault())
-router.Use(http.RecoveryWithDefault())
 router.Use(http.CORSWithDefault())
+```
+
+## 📊 Observability
+
+`dg-http` is instrumented with OpenTelemetry metrics. If `dg-observability` is registered and enabled, the following metrics are automatically emitted:
+
+*   `http_server_request_count_total`: Counter (labels: `http_method`, `http_route`, `http_status_code`)
+*   `http_server_request_duration_milliseconds`: Histogram (labels: `http_method`, `http_route`, `http_status_code`)
+
+To enable observability, ensure the `dg-observability` plugin is registered and configured:
+
+```yaml
+observability:
+  enabled: true
+  service_name: "my-app"
+```
+
+The metrics are collected via a middleware that is automatically applied when using the standard HTTP Kernel or can be applied manually:
+
+```go
+router.Use(dghttp.Observability())
 ```
 
 ## Contributing
