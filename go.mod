@@ -3,7 +3,7 @@ module github.com/donnigundala/dg-http
 go 1.25.0
 
 require (
-	github.com/donnigundala/dg-core v1.9.0
+	github.com/donnigundala/dg-core v1.0.0
 	github.com/gin-gonic/gin v1.11.0
 	github.com/prometheus/client_golang v1.19.1
 	go.opentelemetry.io/otel v1.39.0
@@ -27,6 +27,7 @@ require (
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect

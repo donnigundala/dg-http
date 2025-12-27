@@ -4,6 +4,7 @@ import "time"
 
 // Config holds all configuration for an HTTP server.
 type Config struct {
+	Enabled      bool          `mapstructure:"enabled"`
 	Addr         string        `mapstructure:"addr"`
 	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
 	WriteTimeout time.Duration `mapstructure:"write_timeout"`

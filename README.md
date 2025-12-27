@@ -27,30 +27,61 @@ go get github.com/donnigundala/dg-http
 The easiest way to use `dg-http` is by registering its service provider. This automatically binds the router and kernel to the container.
 
 ```go
+package main
+
 import (
-    "github.com/donnigundala/dg-http"
     "github.com/donnigundala/dg-core/foundation"
+    "github.com/donnigundala/dg-http"
 )
 
 func main() {
     app := foundation.New(".")
     
-    // Register the provider
-    app.Register(&http.HttpServiceProvider{})
+    // 1. Register the HTTP provider
+    app.Register(dghttp.NewHttpServiceProvider())
     
-    app.Boot()
-    
-    // Resolve the engine if needed
-    router := app.Make("router").(*gin.Engine)
-    router.Run(":8080")
+    // 2. Start (starts the HTTP server)
+    app.Start() 
 }
 ```
 
-### 2. Manual Initialization
-If you prefer full control, you can still initialize the components manually:
+### Integration via InfrastructureSuite
+In your `bootstrap/app.go`, the HTTP provider is typically part of the `FrameworkSuite` or registered directly:
 
 ```go
-router.Use(http.CORSWithDefault())
+func (a *Application) registerProviders() error {
+	return a.foundation.Register(
+		providers.NewFrameworkServiceProvider(), // Often contains dghttp
+		providers.NewAppServiceProvider(),
+	)
+}
+```
+
+## Configuration
+
+The plugin uses the `http` key in your configuration file.
+
+### Configuration Mapping (YAML vs ENV)
+
+| YAML Key | Environment Variable | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `http.enabled` | `HTTP_ENABLED` | `true` | Enable HTTP server |
+| `http.addr` | `HTTP_ADDR` | `:8080` | Server address |
+| `http.read_timeout` | `HTTP_READ_TIMEOUT` | `30s` | Read timeout |
+| `http.write_timeout` | `HTTP_WRITE_TIMEOUT` | `30s` | Write timeout |
+| `http.idle_timeout` | `HTTP_IDLE_TIMEOUT` | `60s` | Connection idle timeout |
+
+### Middleware Configuration
+
+Middlewares are typically configured via the `HttpKernel` in your application.
+
+```go
+func (k *Kernel) Middlewares() []dghttp.Middleware {
+    return []dghttp.Middleware{
+        dghttp.CORSMiddleware(),
+        dghttp.GzipMiddleware(),
+    }
+}
 ```
 
 ## 📊 Observability

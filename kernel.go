@@ -33,6 +33,11 @@ func (k *Kernel) GetMiddleware() []gin.HandlerFunc {
 	return k.middleware
 }
 
+// Bootstrap configures the kernel (e.g., routes, middleware).
+func (k *Kernel) Bootstrap() error {
+	return nil
+}
+
 // Handle handles the incoming HTTP request.
 func (k *Kernel) Handle(w netHTTP.ResponseWriter, r *netHTTP.Request) {
 	// Serve the request through Gin engine

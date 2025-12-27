@@ -37,48 +37,37 @@ func (p *HttpServiceProvider) Dependencies() []string {
 // Register registers the HTTP services into the container.
 func (p *HttpServiceProvider) Register(app foundation.Application) error {
 	// 1. Register a default Router (Gin Engine) IF NOT already present.
-	// Applications usually provide their own in the Kernel.
 	if _, err := app.Make("router"); err != nil {
 		app.Singleton("router", func() (interface{}, error) {
 			return NewRouter(), nil
 		})
 	}
 
-	// 2. Register the Kernel (wraps the engine with core logic)
-	// We use a singleton so it's resolved only when needed.
-	app.Singleton("kernel", func() (interface{}, error) {
-		routerInterface, err := app.Make("router")
-		if err != nil {
-			return nil, err
-		}
-		return NewKernel(app, routerInterface.(*gin.Engine)), nil
-	})
-
-	// 3. Register the Server as the main plugin instance.
-	// We resolve the router lazily inside the singleton to ensure we get
-	// the instance that might have been overwritten by the application's Kernel.
-	app.Singleton(Binding, func() (interface{}, error) {
-		routerInterface, err := app.Make("router")
-		if err != nil {
-			return nil, err
-		}
-
-		var loggerInstance Logger
-		// Try to resolve logger from container
-		if log, err := app.Make("logger"); err == nil {
-			// Adapt the logger to our Logger interface
-			if adapted, ok := log.(interface {
-				Debug(msg string, args ...interface{})
-				Info(msg string, args ...interface{})
-				Warn(msg string, args ...interface{})
-				Error(msg string, args ...interface{})
-			}); ok {
-				loggerInstance = &loggerAdapter{logger: adapted}
+	// 2. Register the Server as the main plugin instance IF enabled.
+	if p.Config.Enabled {
+		app.Singleton(Binding, func() (interface{}, error) {
+			routerInterface, err := app.Make("router")
+			if err != nil {
+				return nil, err
 			}
-		}
 
-		return NewHTTPServer(p.Config, routerInterface.(*gin.Engine), WithHTTPLogger(loggerInstance)), nil
-	})
+			var loggerInstance Logger
+			// Try to resolve logger from container
+			if log, err := app.Make("logger"); err == nil {
+				// Adapt the logger to our Logger interface
+				if adapted, ok := log.(interface {
+					Debug(msg string, args ...interface{})
+					Info(msg string, args ...interface{})
+					Warn(msg string, args ...interface{})
+					Error(msg string, args ...interface{})
+				}); ok {
+					loggerInstance = &loggerAdapter{logger: adapted}
+				}
+			}
+
+			return NewHTTPServer(p.Config, routerInterface.(*gin.Engine), WithHTTPLogger(loggerInstance)), nil
+		})
+	}
 
 	return nil
 }
@@ -135,5 +124,13 @@ func (l *loggerAdapter) With(args ...interface{}) Logger {
 
 // Boot boots the HTTP services.
 func (p *HttpServiceProvider) Boot(app foundation.Application) error {
+	// Try to resolve the kernel and bootstrap it
+	if instance, err := app.Make("kernel"); err == nil {
+		if kernel, ok := instance.(interface{ Bootstrap() error }); ok {
+			if err := kernel.Bootstrap(); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
