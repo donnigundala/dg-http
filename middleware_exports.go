@@ -115,3 +115,8 @@ func Observability(config middleware.ObservabilityConfig) gin.HandlerFunc {
 func ObservabilityWithDefault() gin.HandlerFunc {
 	return middleware.Observability(middleware.ObservabilityConfig{})
 }
+
+// Tracing middleware
+func Tracing(serviceName string, debugMode bool) gin.HandlerFunc {
+	return middleware.NewTracingMiddleware(serviceName, debugMode).Handle()
+}
