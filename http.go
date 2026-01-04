@@ -75,7 +75,7 @@ type defaultLogger struct {
 	*slog.Logger
 }
 
-func (l *defaultLogger) With(args ...interface{}) Logger {
+func (l *defaultLogger) With(args ...any) Logger {
 	return &defaultLogger{l.Logger.With(args...)}
 }
 

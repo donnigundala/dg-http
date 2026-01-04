@@ -1,8 +1,6 @@
 package dghttp
 
 import (
-	"reflect"
-
 	"github.com/donnigundala/dg-core/contracts/foundation"
 	"github.com/gin-gonic/gin"
 )
@@ -51,75 +49,14 @@ func (p *HttpServiceProvider) Register(app foundation.Application) error {
 				return nil, err
 			}
 
-			var loggerInstance Logger
-			// Try to resolve logger from container
-			if log, err := app.Make("logger"); err == nil {
-				// Adapt the logger to our Logger interface
-				if adapted, ok := log.(interface {
-					Debug(msg string, args ...interface{})
-					Info(msg string, args ...interface{})
-					Warn(msg string, args ...interface{})
-					Error(msg string, args ...interface{})
-				}); ok {
-					loggerInstance = &loggerAdapter{logger: adapted}
-				}
-			}
+			// Use the application logger (slog.Logger) wrapped in our defaultLogger
+			loggerInstance := &defaultLogger{Logger: app.Log()}
 
 			return NewHTTPServer(p.Config, routerInterface.(*gin.Engine), WithHTTPLogger(loggerInstance)), nil
 		})
 	}
 
 	return nil
-}
-
-// loggerAdapter adapts a generic logger to http.Logger interface.
-type loggerAdapter struct {
-	logger interface {
-		Debug(msg string, args ...interface{})
-		Info(msg string, args ...interface{})
-		Warn(msg string, args ...interface{})
-		Error(msg string, args ...interface{})
-	}
-}
-
-func (l *loggerAdapter) Debug(msg string, args ...interface{}) {
-	l.logger.Debug(msg, args...)
-}
-
-func (l *loggerAdapter) Info(msg string, args ...interface{}) {
-	l.logger.Info(msg, args...)
-}
-
-func (l *loggerAdapter) Warn(msg string, args ...interface{}) {
-	l.logger.Warn(msg, args...)
-}
-
-func (l *loggerAdapter) Error(msg string, args ...interface{}) {
-	l.logger.Error(msg, args...)
-}
-
-func (l *loggerAdapter) With(args ...interface{}) Logger {
-	// Try to call With(args...) via reflection to support different return types
-	v := reflect.ValueOf(l.logger)
-	m := v.MethodByName("With")
-	if m.IsValid() {
-		valArgs := make([]reflect.Value, len(args))
-		for i, arg := range args {
-			valArgs[i] = reflect.ValueOf(arg)
-		}
-		results := m.Call(valArgs)
-		if len(results) == 1 {
-			if nextLogger, ok := results[0].Interface().(interface {
-				Debug(msg string, args ...interface{})
-				Info(msg string, args ...interface{})
-				Warn(msg string, args ...interface{})
-				Error(msg string, args ...interface{})
-			}); ok {
-				return &loggerAdapter{logger: nextLogger}
-			}
-		}
-	}
-	return l
 }
 
 // Boot boots the HTTP services.
