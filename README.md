@@ -1,109 +1,94 @@
-# dg-http
+> **Sealed:** dg-http is governance-complete. All core contracts, provider, and governance documents are certified and frozen. Changes require explicit re-certification.
+# dg-http (Sovereign Transport)
 
-> The official HTTP plugin for the dg-framework, providing a production-ready, Gin-native web stack.
+[![Compliance: ✅](https://img.shields.io/badge/Compliance-✅_PASS-green)](governance/COMPLIANCE.md)
 
-This package was decoupled from `dg-core` to enable a more modular architecture. It provides the HTTP Kernel implementation, production middlewares, and utilities for handling requests and responses.
+`dg-http` is a **Certified Sovereign Plugin** providing the authoritative HTTP transport capability for the DG Framework. It follows the **Capability Surface Pattern**, decoupling the application container from concrete HTTP engines.
 
-## Features
+## 🏛️ Sovereign Architecture
 
-- 🚀 **Gin-Native Router**: High-performance routing with full access to the Gin ecosystem.
-- 🛡️ **Production Middlewares**: 
-  - CORS, Logger, Recovery
-  - Security Headers, Rate Limiting
-  - Request ID, Body Size Limit, Gzip Compression
-- ✅ **Request/Response Helpers**: Standardized JSON responses and request binding utilities.
-- 📁 **File Uploads**: Optimized multipart file upload handlers with validation.
-- 🏥 **Health Checks**: Integrated health monitoring endpoints.
+`dg-http` is structured as a multi-module repository to enforce perfect isolation between authority and infrastructure.
 
-## Installation
+- **`contracts/` (Module)**: The authoritative root. Defines interfaces for `Router`, `Context`, and `Middleware`. 100% dependency-free.
+- **`adapters/`**: Houses concrete bridge implementations.
+    - **`adapters/gin` (Module)**: The official Gin-to-DG adapter.
+- **`provider.go`**: The Capability Surface. A declarative Service Provider that registers the router slot into the container using **Typed Binding Constants**.
 
-```bash
-go get github.com/donnigundala/dg-http
-```
+---
 
-## Usage
+## 🛠️ Capability Category: Type A
 
-### 1. Register as a Service Provider
-The easiest way to use `dg-http` is by registering its service provider. This automatically binds the router and kernel to the container.
+`dg-http` is a **Type A (Cross-cutting) Capability**. It provides expressive transport power but is strictly optional for the system to function.
+
+- **Silent No-op**: Includes a `NewNoopRouter()` in the `contracts` module.
+- **Non-Invasive**: CLI tasks, batch jobs, and workers can exclude the HTTP stack entirely without code changes or registration panics.
+
+---
+
+## 🚀 Usage
+
+### ⚙️ 1. Application Layer (Bootstrap)
+
+The application layer (Skeleton) owns the engine and binds it to the sovereign surface.
 
 ```go
-package main
-
 import (
-    "github.com/donnigundala/dg-core/foundation"
-    "github.com/donnigundala/dg-http"
+    dghttp "github.com/donnigundala/dg-http"
+    dggin "github.com/donnigundala/dg-http/adapters/gin"
+    "github.com/gin-gonic/gin"
 )
 
-func main() {
-    app := foundation.New(".")
-    
-    // 1. Register the HTTP provider
-    app.Register(dghttp.NewHttpServiceProvider())
-    
-    // 2. Start (starts the HTTP server)
-    app.Start() 
+func Register(app foundation.Application) {
+    // 1. Initialize the engine (Application Layer owns this)
+    engine := gin.Default()
+
+    // 2. Configure the Sovereign Surface
+    provider := dghttp.NewHttpServiceProvider().
+        WithRouter(dggin.NewRouter(engine))
+
+    // 3. Register
+    app.Register(provider)
 }
 ```
 
-### Integration via InfrastructureSuite
-In your `bootstrap/app.go`, the HTTP provider is typically part of the `FrameworkSuite` or registered directly:
+### 📦 2. Module Layer (Consumption)
+
+Modules depend ONLY on the `contracts` module, keeping them vendor-blind.
 
 ```go
-func (a *Application) registerProviders() error {
-	return a.foundation.Register(
-		providers.NewFrameworkServiceProvider(), // Often contains dghttp
-		providers.NewAppServiceProvider(),
-	)
+import "github.com/donnigundala/dg-http/contracts"
+
+func (c *UserController) RegisterRoutes(router contracts.Router) {
+    router.GET("/users", c.List)
 }
 ```
 
-## Configuration
+### 🛠️ 3. Adapter Middleware (Helpers)
 
-The plugin uses the `http` key in your configuration file.
-
-### Configuration Mapping (YAML vs ENV)
-
-| YAML Key | Environment Variable | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `http.enabled` | `HTTP_ENABLED` | `true` | Enable HTTP server |
-| `http.addr` | `HTTP_ADDR` | `:8080` | Server address |
-| `http.read_timeout` | `HTTP_READ_TIMEOUT` | `30s` | Read timeout |
-| `http.write_timeout` | `HTTP_WRITE_TIMEOUT` | `30s` | Write timeout |
-| `http.idle_timeout` | `HTTP_IDLE_TIMEOUT` | `60s` | Connection idle timeout |
-
-### Middleware Configuration
-
-Middlewares are typically configured via the `HttpKernel` in your application.
+The Gin adapter provides common middleware helpers that are **sovereign-aware** (resolve observability from the container).
 
 ```go
-func (k *Kernel) Middlewares() []dghttp.Middleware {
-    return []dghttp.Middleware{
-        dghttp.CORSMiddleware(),
-        dghttp.GzipMiddleware(),
+import dggin "github.com/donnigundala/dg-http/adapters/gin"
+
+func (k *Kernel) globalMiddleware() []gin.HandlerFunc {
+    return []gin.HandlerFunc{
+        dggin.RequestID(),                    // Stateless helper
+        dggin.Tracing(k.app, "my-service"),   // Resolves Tracer from container
+        dggin.Logger(k.app),                   // Resolves Logger from container
     }
 }
 ```
 
-## 📊 Observability
+---
 
-`dg-http` is instrumented with OpenTelemetry metrics. If `dg-observability` is registered and enabled, the following metrics are automatically emitted:
+## 📜 Governance
 
-*   `http_server_request_count_total`: Counter (labels: `http_method`, `http_route`, `http_status_code`)
-*   `http_server_request_duration_milliseconds`: Histogram (labels: `http_method`, `http_route`, `http_status_code`)
+- **Zero Infrastructure in Root**: The root `dg-http` module MUST NOT import `gin` or any other engine.
+- **Adapter Isolation**: All engine-specific code belongs in `adapters/`.
+- **Typed Bindings**: Use `dghttp.RouterBinding` for container resolution.
 
-To enable observability, ensure the `dg-observability` plugin is registered and configured:
+> **Note:** dg-http is governance-complete and should be treated as a sealed transport contract.
+> Any changes to the core contracts, provider, or governance documents require explicit re-certification.
 
-```yaml
-observability:
-  enabled: true
-  service_name: "my-app"
-```
-
-The metrics are collected via a middleware that is automatically applied when using the standard HTTP Kernel or can be applied manually:
-
-```go
-router.Use(dghttp.Observability())
-```
-
-## Contributing
-This package is part of the `dg-framework` monorepo. Please refer to the main repository for contributing guidelines.
+---
+**Standard**: [Sovereign Plugin Governance Blueprint](../../dg-core/docs/GOVERNANCE_BLUEPRINT.md)

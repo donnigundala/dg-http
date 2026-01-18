@@ -2,72 +2,46 @@ package dghttp
 
 import (
 	"github.com/donnigundala/dg-core/contracts/foundation"
-	"github.com/gin-gonic/gin"
+	"github.com/donnigundala/dg-http/contracts"
 )
 
-// HttpServiceProvider implements the PluginProvider interface.
+// HttpServiceProvider implements a sovereign http capability surface.
+//
+// DESIGN NOTE: This provider is purely declarative. It should be configured
+// via functional setters (WithRouter) before registration. It is NOT intended
+// to be resolved from the container directly.
 type HttpServiceProvider struct {
-	// Config is auto-injected by dg-core if using config tags
-	// or manually provided.
-	Config Config `config:"http"`
+	router contracts.Router
 }
 
-// NewHttpServiceProvider creates a new HTTP service provider.
+// NewHttpServiceProvider creates a new instance of the provider.
 func NewHttpServiceProvider() *HttpServiceProvider {
-	return &HttpServiceProvider{}
+	return &HttpServiceProvider{
+		router: contracts.NewNoopRouter(),
+	}
 }
 
-// Name returns the plugin name.
-func (p *HttpServiceProvider) Name() string {
-	return Binding
+// WithRouter injects a concrete router implementation into the capability surface.
+// NOTE: Must be called before Register().
+func (p *HttpServiceProvider) WithRouter(router contracts.Router) *HttpServiceProvider {
+	p.router = router
+	return p
 }
 
-// Version returns the plugin version.
-func (p *HttpServiceProvider) Version() string {
-	return Version
-}
+func (p *HttpServiceProvider) Name() string    { return Binding }
+func (p *HttpServiceProvider) Version() string { return Version }
 
-// Dependencies returns the list of dependencies.
 func (p *HttpServiceProvider) Dependencies() []string {
 	return []string{}
 }
 
-// Register registers the HTTP services into the container.
+// Register installs the http router into the container.
 func (p *HttpServiceProvider) Register(app foundation.Application) error {
-	// 1. Register a default Router (Gin Engine) IF NOT already present.
-	if _, err := app.Make("router"); err != nil {
-		app.Singleton("router", func() (interface{}, error) {
-			return NewRouter(), nil
-		})
-	}
-
-	// 2. Register the Server as the main plugin instance IF enabled.
-	if p.Config.Enabled {
-		app.Singleton(Binding, func() (interface{}, error) {
-			routerInterface, err := app.Make("router")
-			if err != nil {
-				return nil, err
-			}
-
-			// Use the application logger (slog.Logger) wrapped in our defaultLogger
-			loggerInstance := &defaultLogger{Logger: app.Log()}
-
-			return NewHTTPServer(p.Config, routerInterface.(*gin.Engine), WithHTTPLogger(loggerInstance)), nil
-		})
-	}
-
+	app.Singleton(RouterBinding, func() (interface{}, error) {
+		return p.router, nil
+	})
 	return nil
 }
 
-// Boot boots the HTTP services.
-func (p *HttpServiceProvider) Boot(app foundation.Application) error {
-	// Try to resolve the kernel and bootstrap it
-	if instance, err := app.Make("kernel"); err == nil {
-		if kernel, ok := instance.(interface{ Bootstrap() error }); ok {
-			if err := kernel.Bootstrap(); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
+func (p *HttpServiceProvider) Boot(app foundation.Application) error     { return nil }
+func (p *HttpServiceProvider) Shutdown(app foundation.Application) error { return nil }
