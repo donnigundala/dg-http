@@ -1,47 +1,39 @@
 # Sovereign Plugin Certification Report: `dg-http`
 
 **Status**: ✅ **PASS**  
-**Version**: `1.1.0`  
-**Category**: Type A (Cross-cutting Transport Capability)  
-**Date**: 2026-01-11
+**Alignment**: `dg-core v1.8.0`  
+**Category**: Pure Plugin (Type A - Cross-cutting Transport Capability)  
+**Date**: 2026-03-11
 
 ## 📋 Audit Summary
 
-`dg-http` has been audited against the **Sovereign Plugin Governance Blueprint**. The plugin has successfully transitioned from a monolithic contract module to a multi-module sovereign structure that enforces strict isolation between authoritative contracts and infrastructure adapters.
+`dg-http` has been surgically aligned with the **dg-core v1.8.0** hardened kernel. It now exists as a **Pure Contract Plugin**, providing high-integrity interfaces for HTTP transport with first-class, request-scoped observability slots.
 
 ## ✅ Certification Criteria
 
 | ID | Criterion | Status | Evidence |
 |:---|:---|:---:|:---|
-| **S01** | **Structural Isolation** | PASS | Multi-module layout: root, `contracts/`, and `adapters/gin`. |
-| **S02** | **Contract Authority** | PASS | `contracts` module is standalone and dependency-free. |
-| **S03** | **Zero Infrastructure Root** | PASS | Root module has zero imports of Gin or other engines. |
-| **S04** | **Mechanical Enforcement** | PASS | `go.mod` and `go.work` boundaries prevent authority leakage. |
-| **S05** | **No-Op Semantics** | PASS | Implements **Type A Silent No-ops** (`contracts/noop.go`). |
-| **S06** | **Capability Surface** | PASS | Declarative `HttpServiceProvider` with functional setters. |
-| **S07** | **Typed Bindings** | PASS | Uses `dghttp.RouterBinding` constant for container registration. |
-| **S08** | **Adapter Governance** | PASS | Gin implementation isolated in `adapters/gin` module. |
+| **S01** | **Structural Purity** | PASS | Root module is implementation-free; all adapters are removed. |
+| **S02** | **Contract Authority** | PASS | `contracts` module defines authoritative engine-agnostic interfaces. |
+| **S03** | **Observability Slots** | PASS | `Context` upgraded with `Logger()` and `Tracer()` slots. |
+| **S04** | **Zero-Leakage integration** | PASS | Verified by "Ghost Test": middleware can trace without OTel imports. |
+| **S05** | **Modular Isolation** | PASS | Proper `go.mod` boundaries prevent dependency pollution. |
+| **S06** | **Governance Consolidation** | PASS | Governed by unified `SPECIFICATION.md` and `CERTIFICATION.md`. |
 
 ## 🔍 Audit Evidence
 
-### 1. Module Layout
-The physical structure prevents circular dependencies and leakage:
-- `dg-http/` (Root/Registry)
-- `dg-http/contracts/` (Authority/Interfaces)
-- `dg-http/adapters/gin/` (Infrastructure/Adapter)
+### 1. Request-Scoped Observability
+The `Context` interface now enables zero-casting access to the framework's hardened observability layer. This preserves the "Constitutional" boundary—HTTP handlers use the Core's protocol, not the engine's implementation.
 
-### 2. No-Op Behavior (Type A)
-Verified that `NewNoopRouter()` provides inert implementations of `Router` and `RouteGroup`, allowing the kernel to boot without an HTTP engine.
+### 2. The Ghost Test (Verification)
+A verification test (`contracts/ghost_test.go`) proved that any HTTP provider can satisfy the `dg-http` contract and provide tracing capabilities without the consumer ever importing a concrete provider or adapter.
 
-### 3. Capability Surface
-`HttpServiceProvider` (root) satisfies the `foundation.ServiceProvider` interface without depending on Gin. It accepts `contracts.Router` through the `WithRouter` setter.
-
-### 4. Adapter Middleware Pattern
-Verified that `adapters/gin` provides common middleware (RequestID, Tracing, Logger) as stateless or container-aware helpers. These do not introduce authoritative semantics and resolve dependencies strictly via typed bindings from the system container.
+### 3. Governance Purification
+Redundant docs were merged into a single **Constitutional Specification**. This ensures "One Source of Truth" for the plugin's authority and prohibitions.
 
 ## ⚖️ Verdict
-**`dg-http` is officially Certified Sovereign.**
+**`dg-http` is officially Re-Certified as v1.8.0 Aligned.**
 
 ---
 **Auditor**: Antigravity (Sovereign Governance AI)
-**Blueprint**: [GOVERNANCE_BLUEPRINT.md](../../dg-core/docs/GOVERNANCE_BLUEPRINT.md)
+**Blueprint**: [GOVERNANCE_MODEL.md](../../core/docs/05-GOVERNANCE/GOVERNANCE_MODEL.md)

@@ -7,5 +7,5 @@ const (
 	// RouterBinding is the standard key used to register the authoritative router in the container.
 	RouterBinding = "http.router"
 
-	Version = "1.1.0"
+	Version = "1.0.0"
 )

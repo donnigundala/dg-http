@@ -1,8 +1,11 @@
-package contracts
+package dghttp
 
 import (
 	"context"
 	"mime/multipart"
+
+	"github.com/dgframe/core/logging"
+	"github.com/dgframe/core/observability"
 )
 
 // NewNoopRouter creates a silent, inert router.
@@ -13,11 +16,37 @@ func NewNoopRouter() Router {
 
 type noopRouter struct{}
 
+func (n *noopRouter) IsNoop() bool { return true }
+
 func (n *noopRouter) Group(prefix string) RouteGroup {
 	panic("dg-http: Router capability not provided (Type B violation)")
 }
 
 func (n *noopRouter) Use(middleware ...Middleware) {
+	panic("dg-http: Router capability not provided (Type B violation)")
+}
+
+func (n *noopRouter) Handle(method, path string, handlers ...Middleware) {
+	panic("dg-http: Router capability not provided (Type B violation)")
+}
+
+func (n *noopRouter) GET(path string, handlers ...Middleware) {
+	panic("dg-http: Router capability not provided (Type B violation)")
+}
+
+func (n *noopRouter) POST(path string, handlers ...Middleware) {
+	panic("dg-http: Router capability not provided (Type B violation)")
+}
+
+func (n *noopRouter) PUT(path string, handlers ...Middleware) {
+	panic("dg-http: Router capability not provided (Type B violation)")
+}
+
+func (n *noopRouter) DELETE(path string, handlers ...Middleware) {
+	panic("dg-http: Router capability not provided (Type B violation)")
+}
+
+func (n *noopRouter) PATCH(path string, handlers ...Middleware) {
 	panic("dg-http: Router capability not provided (Type B violation)")
 }
 
@@ -60,15 +89,13 @@ func NewNoopContext() Context {
 	return &noopContext{}
 }
 
+// noopContext is a no-op implementation of Context.
 type noopContext struct{}
 
-func (n *noopContext) Request() context.Context {
-	panic("dg-http: Context capability not provided (Type B violation)")
-}
-
-func (n *noopContext) Param(key string) string {
-	panic("dg-http: Context capability not provided (Type B violation)")
-}
+func (n *noopContext) Request() context.Context     { return context.Background() }
+func (n *noopContext) Logger() logging.Logger       { return logging.NewNoop() }
+func (n *noopContext) Tracer() observability.Tracer { return observability.NoopTracer{} }
+func (n *noopContext) Param(key string) string      { return "" }
 
 func (n *noopContext) Query(key string) string {
 	panic("dg-http: Context capability not provided (Type B violation)")

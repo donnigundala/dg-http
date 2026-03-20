@@ -1,18 +1,23 @@
-package contracts
+package dghttp
 
 import (
 	"context"
 	"mime/multipart"
+
+	"github.com/dgframe/core/logging"
+	"github.com/dgframe/core/observability"
 )
 
 // Router defines the authoritative contract for an HTTP router.
 // Implementation is owned by the application layer.
 type Router interface {
-	// Group creates a new route group with the given prefix.
-	Group(prefix string) RouteGroup
+	NoopMarker
+	RouteGroup
+}
 
-	// Use adds middleware to the router.
-	Use(middleware ...Middleware)
+// NoopMarker allows the system to detect if a capability is a no-op implementation.
+type NoopMarker interface {
+	IsNoop() bool
 }
 
 // RouteGroup defines a scoped set of routes.
@@ -48,6 +53,12 @@ type Middleware func(ctx Context)
 type Context interface {
 	// Request returns the underlying context.Context.
 	Request() context.Context
+
+	// Logger returns the request-scoped logger.
+	Logger() logging.Logger
+
+	// Tracer returns the request-scoped tracer.
+	Tracer() observability.Tracer
 
 	// Params returns route parameters.
 	Param(key string) string

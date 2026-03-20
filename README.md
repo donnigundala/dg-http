@@ -1,94 +1,54 @@
-> **Sealed:** dg-http is governance-complete. All core contracts, provider, and governance documents are certified and frozen. Changes require explicit re-certification.
-# dg-http (Sovereign Transport)
+# dg-http (Constitutional Contracts)
 
-[![Compliance: ✅](https://img.shields.io/badge/Compliance-✅_PASS-green)](governance/COMPLIANCE.md)
+[![Compliance: ✅](https://img.shields.io/badge/Compliance-✅_PASS-green)](governance/CERTIFICATION.md)
 
-`dg-http` is a **Certified Sovereign Plugin** providing the authoritative HTTP transport capability for the DG Framework. It follows the **Capability Surface Pattern**, decoupling the application container from concrete HTTP engines.
+`dg-http` is a **Pure Contract Plugin (Type A)** providing the authoritative HTTP transport interfaces for the dg ecosystem. It defines the "Universal Protocol" for request handling, routing, and observability integration without owning any infrastructure.
+
+---
 
 ## 🏛️ Sovereign Architecture
 
-`dg-http` is structured as a multi-module repository to enforce perfect isolation between authority and infrastructure.
+To enforce perfect isolation between authority and infrastructure, `dg-http` contains **zero implementation logic**.
 
-- **`contracts/` (Module)**: The authoritative root. Defines interfaces for `Router`, `Context`, and `Middleware`. 100% dependency-free.
-- **`adapters/`**: Houses concrete bridge implementations.
-    - **`adapters/gin` (Module)**: The official Gin-to-DG adapter.
-- **`provider.go`**: The Capability Surface. A declarative Service Provider that registers the router slot into the container using **Typed Binding Constants**.
-
----
-
-## 🛠️ Capability Category: Type A
-
-`dg-http` is a **Type A (Cross-cutting) Capability**. It provides expressive transport power but is strictly optional for the system to function.
-
-- **Silent No-op**: Includes a `NewNoopRouter()` in the `contracts` module.
-- **Non-Invasive**: CLI tasks, batch jobs, and workers can exclude the HTTP stack entirely without code changes or registration panics.
+- **`contracts/`**: The authoritative root. Defines interfaces for `Router`, `Context`, `Middleware`, and `Controller`. 
+- **`governance/`**: Contains the [Constitutional Specification](governance/SPECIFICATION.md) and [Certification](governance/CERTIFICATION.md).
+- **Zero-Dependency**: Depends strictly on `dg-core` and the Go Standard Library.
 
 ---
 
-## 🚀 Usage
+## 🚀 v1.8.0 Alignment: Observability Slots
 
-### ⚙️ 1. Application Layer (Bootstrap)
-
-The application layer (Skeleton) owns the engine and binds it to the sovereign surface.
+In the v1.8.0 hardening, the `Context` interface was upgraded to include first-class observability slots. This ensures that any HTTP handler can perform logging and tracing that is automatically correlated by the underlying engine.
 
 ```go
-import (
-    dghttp "github.com/donnigundala/dg-http"
-    dggin "github.com/donnigundala/dg-http/adapters/gin"
-    "github.com/gin-gonic/gin"
-)
-
-func Register(app foundation.Application) {
-    // 1. Initialize the engine (Application Layer owns this)
-    engine := gin.Default()
-
-    // 2. Configure the Sovereign Surface
-    provider := dghttp.NewHttpServiceProvider().
-        WithRouter(dggin.NewRouter(engine))
-
-    // 3. Register
-    app.Register(provider)
+func (c *UserController) GetProfile(ctx contracts.Context) {
+    // Zero-casting access to request-scoped observability
+    ctx.Logger().Info("Fetching profile")
+    
+    _, span := ctx.Tracer().Start(ctx.Request(), "db.query")
+    defer span.End()
+    
+    // ... logic
 }
 ```
 
-### 📦 2. Module Layer (Consumption)
+---
 
-Modules depend ONLY on the `contracts` module, keeping them vendor-blind.
+## 🛠️ Usage Tier: Pure Plugin
 
-```go
-import "github.com/donnigundala/dg-http/contracts"
+`dg-http` is a **Type A (Cross-cutting) Capability**. It is strictly optional and provides a silent `Noop` fallback.
 
-func (c *UserController) RegisterRoutes(router contracts.Router) {
-    router.GET("/users", c.List)
-}
-```
-
-### 🛠️ 3. Adapter Middleware (Helpers)
-
-The Gin adapter provides common middleware helpers that are **sovereign-aware** (resolve observability from the container).
-
-```go
-import dggin "github.com/donnigundala/dg-http/adapters/gin"
-
-func (k *Kernel) globalMiddleware() []gin.HandlerFunc {
-    return []gin.HandlerFunc{
-        dggin.RequestID(),                    // Stateless helper
-        dggin.Tracing(k.app, "my-service"),   // Resolves Tracer from container
-        dggin.Logger(k.app),                   // Resolves Logger from container
-    }
-}
-```
+1. **Modules**: Depend only on `github.com/dgframe/dg-http/contracts`.
+2. **Implementation**: Provided by sovereign adapters like `dg-provider-gin` or `dg-provider-fiber`.
+3. **Skeleton**: Binds a concrete implementation to the system during bootstrap.
 
 ---
 
 ## 📜 Governance
 
-- **Zero Infrastructure in Root**: The root `dg-http` module MUST NOT import `gin` or any other engine.
-- **Adapter Isolation**: All engine-specific code belongs in `adapters/`.
-- **Typed Bindings**: Use `dghttp.RouterBinding` for container resolution.
-
-> **Note:** dg-http is governance-complete and should be treated as a sealed transport contract.
-> Any changes to the core contracts, provider, or governance documents require explicit re-certification.
+- **Zero Infrastructure**: This module MUST NOT import any HTTP engine (Gin, Fiber, etc.).
+- **Adapter Independence**: Implementation details (timeouts, server limits, TLS) belong to the implementation provider, not the contract.
+- **Sealed Status**: `dg-http` is considered a sealed transport contract. Changes require explicit re-certification by the Governance Authority.
 
 ---
-**Standard**: [Sovereign Plugin Governance Blueprint](../../dg-core/docs/GOVERNANCE_BLUEPRINT.md)
+**Standard**: [Sovereign Plugin Governance Blueprint](../../core/docs/05-GOVERNANCE/GOVERNANCE_MODEL.md)

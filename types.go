@@ -1,4 +1,4 @@
-package contracts
+package dghttp
 
 // SuccessResponse represents a successful API response.
 type SuccessResponse struct {
